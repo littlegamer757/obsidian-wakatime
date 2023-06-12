@@ -7,6 +7,7 @@ import { LogLevel } from './constants';
 import { Utils } from './utils';
 import { Dependencies } from './dependencies';
 import { Desktop } from './desktop';
+import {createProjectProgram} from "@typescript-eslint/typescript-estree/dist/create-program/createProjectProgram";
 
 export default class WakaTime extends Plugin {
   options: Options;
@@ -109,9 +110,10 @@ export default class WakaTime extends Plugin {
     const cursor = view.editor.getCursor();
     // @ts-expect-error
     const file = `${this.app.vault.adapter.basePath}/${activeFile.path}`;
+    const project = this.app.vault.getName();
     const time: number = Date.now();
     if (isWrite || this.enoughTimePassed(time) || this.lastFile !== file) {
-      this.sendHeartbeat(file, time, cursor.line, cursor.ch, isWrite);
+      this.sendHeartbeat(file, project, time, cursor.line, cursor.ch, isWrite);
       this.lastFile = file;
       this.lastHeartbeat = time;
     }
@@ -141,6 +143,7 @@ export default class WakaTime extends Plugin {
 
   private sendHeartbeat(
     file: string,
+    project: string, 
     time: number,
     lineno: number,
     cursorpos: number,
@@ -148,12 +151,13 @@ export default class WakaTime extends Plugin {
   ): void {
     this.options.getApiKey((apiKey) => {
       if (!apiKey) return;
-      this._sendHeartbeat(file, time, lineno, cursorpos, isWrite);
+      this._sendHeartbeat(file, project, time, lineno, cursorpos, isWrite);
     });
   }
 
   private _sendHeartbeat(
     file: string,
+    project: string,
     time: number,
     lineno: number,
     cursorpos: number,
@@ -164,6 +168,7 @@ export default class WakaTime extends Plugin {
     const args: string[] = [];
 
     args.push('--entity', Utils.quote(file));
+    args.push('--project', project);
 
     const user_agent = 'obsidian/' + apiVersion + ' obsidian-wakatime/' + this.manifest.version;
     args.push('--plugin', Utils.quote(user_agent));
